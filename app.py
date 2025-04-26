@@ -4,15 +4,10 @@ import numpy as np
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from statsmodels.tsa.arima.model import ARIMA
-from prophet import Prophet
 import logging
 import warnings
 import holidays
-from scipy.spatial.distance import cdist
-from sklearn.metrics import mean_absolute_error
 from functools import lru_cache
-import json
 import pytz
 
 warnings.filterwarnings("ignore")
@@ -43,28 +38,22 @@ def get_db_connection(db_name=None):
 def get_ist_time():
     return datetime.now(pytz.timezone(CONFIG['timezone']))
 
-def calculate_holidays(year):
-    india_holidays = holidays.CountryHoliday(CONFIG['holiday_country'], years=year)
-    return list(india_holidays.keys())
-
 def validate_date(date_str):
     try:
         return datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         return None
 
-# Enhanced prediction models
+# Simplified Price Predictor with only Holt-Winters
 class PricePredictor:
     def __init__(self, city):
         self.city = city
         self.current_date = get_ist_time().date()
         
-    def load_data(self, start_date=None, end_date=None):
-        """Load price data for the city with optional date range"""
-        if start_date is None:
-            start_date = (self.current_date - timedelta(days=365*CONFIG['max_train_years'])).strftime('%Y-%m-%d')
-        if end_date is None:
-            end_date = self.current_date.strftime('%Y-%m-%d')
+    def load_data(self):
+        """Load price data for the city"""
+        start_date = (self.current_date - timedelta(days=365*CONFIG['max_train_years'])).strftime('%Y-%m-%d')
+        end_date = self.current_date.strftime('%Y-%m-%d')
             
         conn = get_db_connection()
         query = '''
@@ -102,109 +91,33 @@ class PricePredictor:
             logger.error(f"Holt-Winters failed for {self.city}: {str(e)}")
             return None
     
-    def arima_predict(self, data, periods=12):
-        """ARIMA prediction"""
-        try:
-            model = ARIMA(data, order=(1,1,1)).fit()
-            forecast = model.forecast(steps=periods)
-            return forecast
-        except Exception as e:
-            logger.error(f"ARIMA failed for {self.city}: {str(e)}")
-            return None
-    
-    def prophet_predict(self, data, periods=12):
-        """Facebook Prophet prediction"""
-        try:
-            df = data.reset_index()
-            df.columns = ['ds', 'y']
-            
-            model = Prophet(
-                yearly_seasonality=True,
-                weekly_seasonality=False,
-                daily_seasonality=False
-            )
-            model.fit(df)
-            
-            future = model.make_future_dataframe(periods=periods, freq='M')
-            forecast = model.predict(future)
-            
-            return forecast.set_index('ds')['yhat'][-periods:]
-        except Exception as e:
-            logger.error(f"Prophet failed for {self.city}: {str(e)}")
-            return None
-    
-    def ensemble_predict(self, data, periods=12):
-        """Ensemble prediction using multiple models"""
-        predictions = []
-        models = {
-            'holt_winters': self.holt_winters_predict(data, periods),
-            'arima': self.arima_predict(data, periods),
-            'prophet': self.prophet_predict(data, periods)
-        }
-        
-        # Only use successful predictions
-        valid_preds = {k: v for k, v in models.items() if v is not None}
-        
-        if not valid_preds:
-            return None
-            
-        # Calculate ensemble as simple average
-        ensemble = pd.concat(valid_preds.values(), axis=1).mean(axis=1)
-        return ensemble
-    
-    def predict(self, prediction_type='next_12months'):
-        """Main prediction method with multiple forecast types"""
-        # Always work with monthly data for these predictions
+    def predict(self):
+        """Main prediction method for next 12 months"""
         data = self.load_data()
         if data is None:
             return None
             
         monthly_data = data.resample('M').mean()
         
-        if prediction_type == 'next_month':
-            periods = 1
-        elif prediction_type == 'next_3months':
-            periods = 3
-        elif prediction_type == 'next_6months':
-            periods = 6
-        elif prediction_type == 'next_year':
-            periods = 12
-        else:  # next_12months
-            periods = 12
-            
-        # Get predictions from all models
-        pred_hw = self.holt_winters_predict(monthly_data, periods)
-        pred_arima = self.arima_predict(monthly_data, periods)
-        pred_prophet = self.prophet_predict(monthly_data, periods)
-        pred_ensemble = self.ensemble_predict(monthly_data, periods)
+        # Get predictions from Holt-Winters
+        pred_hw = self.holt_winters_predict(monthly_data, 12)
         
-        # Determine which predictions to return
-        pred = pred_ensemble if pred_ensemble is not None else pred_hw
-        
-        if pred is None:
+        if pred_hw is None:
             return None
             
         # Create dates for the forecast period
-        if prediction_type == 'next_month':
-            dates = [self.current_date.replace(day=1) + timedelta(days=32)]
-            dates = [d.replace(day=1) - timedelta(days=1) for d in dates]  # Last day of next month
-        else:
-            dates = pd.date_range(
-                start=self.current_date.replace(day=1), 
-                periods=periods, 
-                freq='M'
-            )
+        dates = pd.date_range(
+            start=self.current_date.replace(day=1), 
+            periods=12, 
+            freq='M'
+        )
             
         result = {
-            'prediction': pred.tolist(),
+            'prediction': pred_hw.tolist(),
             'dates': [d.strftime('%Y-%m-%d') for d in dates],
-            'models': list(valid_preds.keys()),
+            'model': 'Holt-Winters',
             'last_actual': monthly_data.iloc[-1] if len(monthly_data) > 0 else None,
-            'last_date': monthly_data.index[-1].strftime('%Y-%m-%d') if len(monthly_data) > 0 else None,
-            'holt_winters': pred_hw.tolist() if pred_hw is not None else None,
-            'arima': pred_arima.tolist() if pred_arima is not None else None,
-            'prophet': pred_prophet.tolist() if pred_prophet is not None else None,
-            'ensemble': pred_ensemble.tolist() if pred_ensemble is not None else None
+            'last_date': monthly_data.index[-1].strftime('%Y-%m-%d') if len(monthly_data) > 0 else None
         }
         
         return result
@@ -489,33 +402,23 @@ def get_yearly_range():
 @lru_cache(maxsize=100)
 def get_prediction():
     city = request.args.get('city')
-    prediction_type = request.args.get('type', 'next_12months')
     
     if not city:
         return jsonify({'error': 'City parameter is required'}), 400
     
-    # Only allow these prediction types
-    if prediction_type not in ['next_month', 'next_3months', 'next_6months', 'next_year', 'next_12months']:
-        return jsonify({'error': 'Invalid prediction type'}), 400
-    
     predictor = PricePredictor(city)
-    result = predictor.predict(prediction_type)
+    result = predictor.predict()
     
     if result is None:
         return jsonify({'error': 'Prediction failed'}), 500
         
     return jsonify({
         'city': city,
-        'type': prediction_type,
         'prediction': result['prediction'],
         'dates': result['dates'],
-        'models': result['models'],
+        'model': result['model'],
         'last_actual': result['last_actual'],
-        'last_date': result['last_date'],
-        'holt_winters': result['holt_winters'],
-        'arima': result['arima'],
-        'prophet': result['prophet'],
-        'ensemble': result['ensemble']
+        'last_date': result['last_date']
     })
 
 @app.route('/api/district/price')

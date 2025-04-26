@@ -7,11 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.0.1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
+    <link href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" rel="stylesheet">
     <style>
         :root {
             --primary-color: #4e73df;
@@ -230,6 +226,29 @@
             color: var(--primary-color);
         }
         
+        #priceMap {
+            height: 400px;
+            border-radius: 0.35rem;
+        }
+        
+        .map-legend {
+            padding: 6px 8px;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            line-height: 18px;
+            color: #555;
+        }
+        
+        .map-legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+        }
+        
         @media (max-width: 768px) {
             .sidebar {
                 width: 100%;
@@ -254,49 +273,49 @@
             
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link active" href="#dashboard" data-toggle="tab">
+                    <a class="nav-link active" href="#dashboard" data-bs-toggle="tab">
                         <i class="bi bi-speedometer2"></i>
                         Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#daily" data-toggle="tab">
+                    <a class="nav-link" href="#daily" data-bs-toggle="tab">
                         <i class="bi bi-calendar-day"></i>
                         Daily View
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#monthly" data-toggle="tab">
+                    <a class="nav-link" href="#monthly" data-bs-toggle="tab">
                         <i class="bi bi-calendar-month"></i>
                         Monthly Trends
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#yearly" data-toggle="tab">
+                    <a class="nav-link" href="#yearly" data-bs-toggle="tab">
                         <i class="bi bi-graph-up"></i>
                         Yearly Analysis
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#compare" data-toggle="tab">
+                    <a class="nav-link" href="#compare" data-bs-toggle="tab">
                         <i class="bi bi-bar-chart"></i>
                         Compare Cities
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#predictions" data-toggle="tab">
+                    <a class="nav-link" href="#predictions" data-bs-toggle="tab">
                         <i class="bi bi-magic"></i>
                         Price Predictions
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#district" data-toggle="tab">
+                    <a class="nav-link" href="#district" data-bs-toggle="tab">
                         <i class="bi bi-geo-alt"></i>
                         District Checker
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#alerts" data-toggle="tab">
+                    <a class="nav-link" href="#alerts" data-bs-toggle="tab">
                         <i class="bi bi-bell"></i>
                         Price Alerts
                     </a>
@@ -401,7 +420,7 @@
                         <h6 class="m-0 font-weight-bold text-primary">Regional Price Distribution</h6>
                     </div>
                     <div class="card-body">
-                        <div id="priceMap" style="height: 400px;"></div>
+                        <div id="priceMap"></div>
                     </div>
                 </div>
                 
@@ -441,6 +460,33 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- All Cities Predictions -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">All Cities Predictions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table data-table" id="allPredictionsTable">
+                                <thead>
+                                    <tr>
+                                        <th>City</th>
+                                        <th>Next Month</th>
+                                        <th>Prediction Date</th>
+                                        <th>Next Year Avg</th>
+                                        <th>Year Range</th>
+                                        <th>Model</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Filled by JavaScript -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1071,7 +1117,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- New Alert Modal -->
     <div class="modal fade" id="newAlertModal" tabindex="-1" aria-labelledby="newAlertModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -1141,6 +1187,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0/dist/chartjs-adapter-luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
     
     <script>
         // Global variables
@@ -1148,87 +1195,172 @@
         let currentDate = luxon.DateTime.now().toISODate();
         let cities = [];
         let districts = [];
+        let priceMap = null;
         
+	function loadDistricts() {
+	    $.get('/api/districts', function(data) {
+	        districts = data.districts;
+	        const districtSelect = $('#districtSelect');
+	        const alertDistrict = $('#alertDistrict');
+        
+	        districtSelect.empty();
+	        alertDistrict.empty();
+	        districtSelect.append($('<option>').val('').text('Select district'));
+	        alertDistrict.append($('<option>').val('').text('Select district'));
+        
+	        districts.forEach(district => {
+	            districtSelect.append($('<option>').val(district).text(district));
+	            alertDistrict.append($('<option>').val(district).text(district));
+	        });
+        
+	        if (districts.length > 0) {
+	            districtSelect.val(districts[0]).trigger('change');
+	        }
+	    }).fail(function() {
+	        console.error('Failed to load districts');
+	    });
+	}
+
         // Initialize the application
-	$(document).ready(function() {
-    	    // Initialize select2
-	    $('.form-select').select2({
-        	width: '100%',
-        	theme: 'bootstrap-5'
-	    });
-	
-	    // Load initial data
-	    loadCities();
-	    loadDistricts();
-	    updateLastUpdated();
-	    updateDashboardStats();
-
-	    // Set up event listeners
-	    $('#todayCity').on('change', updateDashboardStats);
-	    $('#dailyCity, #dailyDate').on('change', updateDailyView);
-	    $('#monthlyCity, #monthlyDate').on('change', updateMonthlyView);
-	    $('#yearlyCity, #yearlyYear').on('change', updateYearlyView);
-	    $('#compareCity1, #compareCity2, #compareCity3, #compareYear').on('change', updateCompareView);
-	    $('#predictCity').on('change', updatePredictions);
-	    $('#refreshPredictions').on('click', updatePredictions);
-	    $('#districtSelect').on('change', updateDistrictView);
-	    $('#checkDistrictPrice').on('click', updateDistrictView);
-	    $('#searchButton').on('click', searchCity);
-
-	    // Time range buttons
-	    $('#dailyWeekBtn, #dailyMonthBtn, #dailyQuarterBtn, #dailyYearBtn').on('click', function() {
-	        setDailyTimeRange($(this).attr('id'));
-	    });
-
-	    $('#monthly1YBtn, #monthly3YBtn, #monthly5YBtn, #monthlyAllBtn').on('click', function() {
-	        setMonthlyTimeRange($(this).attr('id'));
-	    });
-	
-	    // Initialize Bootstrap tabs
-	    $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
-	        const target = $(e.target).attr('href');
-	        
-	        // Hide all content divs first
-	        $('.tab-pane').removeClass('show active');
+        $(document).ready(function() {
+            // Initialize select2
+            $('.form-select').select2({
+                width: '100%',
+                theme: 'bootstrap-5'
+            });
         
-	        // Show the selected tab content
-	        $(target).addClass('show active');
-        
-	        // Load data for the selected tab
-	        if (target === '#daily') {
-	            updateDailyView();
-	        } else if (target === '#monthly') {
-	            updateMonthlyView();
-	        } else if (target === '#yearly') {
-	            updateYearlyView();
-	        } else if (target === '#compare') {
-	            updateCompareView();
-	        } else if (target === '#predictions') {
-	            updatePredictions();
-	        } else if (target === '#district') {
-	            updateDistrictView();
-	        } else if (target === '#alerts') {
-	            loadAlerts();
-	        }
-	    });
+            // Load initial data
+            loadCities();
+            loadDistricts();
+            updateLastUpdated();
+            updateDashboardStats();
+            initPriceMap();
 
-	    // Activate the first tab by default
-	    $('a[href="#dashboard"]').tab('show');
-	    $('#dashboard').addClass('show active');
-	
-	    // Alert form handling
-	    $('#alertLocationType').on('change', function() {
-	        if ($(this).val() === 'city') {
-	            $('#alertCityContainer').removeClass('d-none');
-	            $('#alertDistrictContainer').addClass('d-none');
-	        } else {
-	            $('#alertCityContainer').addClass('d-none');
-	            $('#alertDistrictContainer').removeClass('d-none');
-	        }
-	    });
-	
-	    $('#saveAlert').on('click', saveAlert);
-	});
+            // Set up event listeners
+            $('#todayCity').on('change', updateDashboardStats);
+            $('#dailyCity, #dailyDate').on('change', updateDailyView);
+            $('#monthlyCity, #monthlyDate').on('change', updateMonthlyView);
+            $('#yearlyCity, #yearlyYear').on('change', updateYearlyView);
+            $('#compareCity1, #compareCity2, #compareCity3, #compareYear').on('change', updateCompareView);
+            $('#predictCity').on('change', updatePredictions);
+            $('#refreshPredictions').on('click', updatePredictions);
+            $('#districtSelect').on('change', updateDistrictView);
+            $('#checkDistrictPrice').on('click', updateDistrictView);
+            $('#searchButton').on('click', searchCity);
+
+            // Time range buttons
+            $('#dailyWeekBtn, #dailyMonthBtn, #dailyQuarterBtn, #dailyYearBtn').on('click', function() {
+                setDailyTimeRange($(this).attr('id'));
+            });
+
+            $('#monthly1YBtn, #monthly3YBtn, #monthly5YBtn, #monthlyAllBtn').on('click', function() {
+                setMonthlyTimeRange($(this).attr('id'));
+            });
+        
+            // Initialize Bootstrap tabs
+            $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
+                const target = $(e.target).attr('href');
+                
+                // Load data for the selected tab
+                if (target === '#daily') {
+                    updateDailyView();
+                } else if (target === '#monthly') {
+                    updateMonthlyView();
+                } else if (target === '#yearly') {
+                    updateYearlyView();
+                } else if (target === '#compare') {
+                    updateCompareView();
+                } else if (target === '#predictions') {
+                    updatePredictions();
+                } else if (target === '#district') {
+                    updateDistrictView();
+                } else if (target === '#alerts') {
+                    loadAlerts();
+                }
+            });
+
+            // Activate the first tab by default
+            $('a[href="#dashboard"]').tab('show');
+        });
+        
+        // Initialize price map
+        function initPriceMap() {
+            priceMap = L.map('priceMap').setView([20.5937, 78.9629], 5);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(priceMap);
+            
+            // Add legend
+            const legend = L.control({position: 'bottomright'});
+            
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'map-legend');
+                div.innerHTML = `
+                    <h6>Price Ranges (₹)</h6>
+                    <i style="background: #1a9641"></i> 350-400<br>
+                    <i style="background: #a6d96a"></i> 400-450<br>
+                    <i style="background: #ffffbf"></i> 450-500<br>
+                    <i style="background: #fdae61"></i> 500-550<br>
+                    <i style="background: #d7191c"></i> 550-600
+                `;
+                return div;
+            };
+            
+            legend.addTo(priceMap);
+        }
+        
+        // Update price map with city data
+        function updatePriceMap(prices) {
+            if (!priceMap) return;
+            
+            // Clear existing markers
+            priceMap.eachLayer(function(layer) {
+                if (layer instanceof L.Marker) {
+                    priceMap.removeLayer(layer);
+                }
+            });
+            
+            // Add new markers
+            prices.forEach(cityPrice => {
+                // In a real implementation, you would have city coordinates
+                // For demo, we'll use random coordinates within India
+                const lat = 18 + Math.random() * 15;
+                const lng = 68 + Math.random() * 22;
+                
+                // Determine color based on price
+                let color;
+                if (cityPrice.price < 400) color = '#1a9641';
+                else if (cityPrice.price < 450) color = '#a6d96a';
+                else if (cityPrice.price < 500) color = '#ffffbf';
+                else if (cityPrice.price < 550) color = '#fdae61';
+                else color = '#d7191c';
+                
+                // Create marker
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 8,
+                    fillColor: color,
+                    color: '#000',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(priceMap);
+                
+                // Add popup
+                marker.bindPopup(`
+                    <b>${cityPrice.city}</b><br>
+                    Price: ₹${cityPrice.price.toFixed(2)}<br>
+                    <small>Click for details</small>
+                `);
+                
+                // Add click handler
+                marker.on('click', function() {
+                    $('a[href="#daily"]').tab('show');
+                    $('#dailyCity').val(cityPrice.city).trigger('change');
+                    updateDailyView();
+                });
+            });
+        }
         
         // Load cities from API
         function loadCities() {
@@ -1265,8 +1397,57 @@
                 $('#monthlyDate').val(currentDate.substring(0, 7));
                 $('#yearlyYear').val(currentDate.substring(0, 4));
                 $('#compareYear').val(currentDate.substring(0, 4));
+                
+                // Load all cities predictions
+                loadAllCitiesPredictions();
             }).fail(function() {
                 console.error('Failed to load cities');
+            });
+        }
+        
+        // Load all cities predictions
+        function loadAllCitiesPredictions() {
+            $.get('/api/cities/predictions', function(data) {
+                if (data.predictions) {
+                    const table = $('#allPredictionsTable tbody');
+                    table.empty();
+                    
+                    data.predictions.forEach(pred => {
+                        const row = $('<tr>');
+                        row.append($('<td>').text(pred.city));
+                        
+                        // Next month
+                        row.append($('<td>').text(pred.next_month ? `₹${pred.next_month.toFixed(2)}` : 'N/A'));
+                        row.append($('<td>').text(pred.next_month_date || 'N/A'));
+                        
+                        // Next year
+                        row.append($('<td>').text(pred.next_year ? `₹${pred.next_year.toFixed(2)}` : 'N/A'));
+                        row.append($('<td>').text(
+                            pred.next_year_start && pred.next_year_end ? 
+                            `${pred.next_year_start} to ${pred.next_year_end}` : 'N/A'
+                        ));
+                        
+                        // Model
+                        row.append($('<td>').text(pred.model || 'N/A'));
+                        
+                        // Actions
+                        const actions = $('<td>');
+                        actions.append($('<button>')
+                            .addClass('btn btn-sm btn-outline-primary')
+                            .html('<i class="bi bi-graph-up"></i>')
+                            .on('click', function() {
+                                $('a[href="#predictions"]').tab('show');
+                                $('#predictCity').val(pred.city).trigger('change');
+                                updatePredictions();
+                            })
+                        );
+                        row.append(actions);
+                        
+                        table.append(row);
+                    });
+                }
+            }).fail(function() {
+                console.error('Failed to load cities predictions');
             });
         }
         
