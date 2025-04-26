@@ -1,0 +1,3215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egg Price Intelligence Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.0.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0"></script>
+    <style>
+        :root {
+            --primary-color: #4e73df;
+            --secondary-color: #858796;
+            --success-color: #1cc88a;
+            --info-color: #36b9cc;
+            --warning-color: #f6c23e;
+            --danger-color: #e74a3b;
+            --light-color: #f8f9fc;
+            --dark-color: #5a5c69;
+        }
+        
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fc;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+            width: 250px;
+        }
+        
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .sidebar .nav-link {
+            font-weight: 500;
+            color: #333;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sidebar .nav-link:hover {
+            color: var(--primary-color);
+            background-color: rgba(78, 115, 223, 0.05);
+        }
+        
+        .sidebar .nav-link.active {
+            color: var(--primary-color);
+            background-color: rgba(78, 115, 223, 0.1);
+        }
+        
+        .sidebar .nav-link i {
+            margin-right: 0.5rem;
+            color: #d1d3e2;
+        }
+        
+        .sidebar .nav-link.active i,
+        .sidebar .nav-link:hover i {
+            color: var(--primary-color);
+        }
+        
+        .sidebar-heading {
+            font-size: .75rem;
+            text-transform: uppercase;
+            padding: 0 1.5rem;
+            font-weight: 800;
+            color: #b7b9cc;
+            letter-spacing: .13em;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 0.35rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: #f8f9fc;
+            border-bottom: 1px solid #e3e6f0;
+            padding: 1rem 1.35rem;
+            font-weight: 600;
+        }
+        
+        .card-body {
+            padding: 1.25rem;
+        }
+        
+        .stat-card {
+            border-left: 0.25rem solid var(--primary-color);
+        }
+        
+        .stat-card .card-body {
+            padding: 1rem 1.5rem;
+        }
+        
+        .stat-card .stat-title {
+            text-transform: uppercase;
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--secondary-color);
+            letter-spacing: 0.1em;
+        }
+        
+        .stat-card .stat-value {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--dark-color);
+        }
+        
+        .stat-card .stat-change {
+            font-size: 0.875rem;
+        }
+        
+        .stat-card .stat-change.positive {
+            color: var(--success-color);
+        }
+        
+        .stat-card .stat-change.negative {
+            color: var(--danger-color);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .data-table {
+            width: 100%;
+        }
+        
+        .data-table th {
+            background-color: var(--light-color);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+        }
+        
+        .price-change {
+            display: inline-block;
+            padding: 0.25em 0.4em;
+            font-size: 75%;
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+        }
+        
+        .price-change.positive {
+            background-color: rgba(28, 200, 138, 0.1);
+            color: var(--success-color);
+        }
+        
+        .price-change.negative {
+            background-color: rgba(231, 74, 59, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .price-change.neutral {
+            background-color: rgba(133, 135, 150, 0.1);
+            color: var(--secondary-color);
+        }
+        
+        .prediction-card {
+            border-left: 0.25rem solid var(--info-color);
+        }
+        
+        .prediction-card .prediction-title {
+            font-weight: 600;
+            color: var(--secondary-color);
+            font-size: 0.875rem;
+        }
+        
+        .prediction-card .prediction-value {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark-color);
+        }
+        
+        .prediction-card .prediction-range {
+            font-size: 0.75rem;
+            color: var(--secondary-color);
+        }
+        
+        .tab-content {
+            padding: 1.5rem 0;
+        }
+        
+        .nav-tabs .nav-link {
+            color: var(--secondary-color);
+            font-weight: 600;
+            border: none;
+            padding: 0.75rem 1.5rem;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        .nav-tabs .nav-link:hover:not(.active) {
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar navbar-dark">
+        <div class="sidebar-sticky">
+            <div class="text-center py-4">
+                <h4 class="text-primary font-weight-bold">Egg Price Intelligence</h4>
+                <small class="text-muted">National Egg Coordination Committee</small>
+            </div>
+            
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#dashboard" data-toggle="tab">
+                        <i class="bi bi-speedometer2"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#daily" data-toggle="tab">
+                        <i class="bi bi-calendar-day"></i>
+                        Daily View
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#monthly" data-toggle="tab">
+                        <i class="bi bi-calendar-month"></i>
+                        Monthly Trends
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#yearly" data-toggle="tab">
+                        <i class="bi bi-graph-up"></i>
+                        Yearly Analysis
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#compare" data-toggle="tab">
+                        <i class="bi bi-bar-chart"></i>
+                        Compare Cities
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#predictions" data-toggle="tab">
+                        <i class="bi bi-magic"></i>
+                        Price Predictions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#district" data-toggle="tab">
+                        <i class="bi bi-geo-alt"></i>
+                        District Checker
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#alerts" data-toggle="tab">
+                        <i class="bi bi-bell"></i>
+                        Price Alerts
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="mt-auto p-3 text-center">
+                <small class="text-muted">Data updated: <span id="last-updated">Loading...</span></small>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Dashboard Tab -->
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="dashboard">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Dashboard Overview</h1>
+                    <div class="input-group" style="width: 300px;">
+                        <input type="text" class="form-control" id="searchCity" placeholder="Search city...">
+                        <button class="btn btn-primary" type="button" id="searchButton">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="row">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="stat-title">Today's Price</div>
+                                        <select class="form-select form-select-sm mt-2" id="todayCity" style="width: 150px;"></select>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="stat-value" id="todayPrice">₹---</div>
+                                        <div class="stat-change" id="todayChange">--%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="stat-title">Highest Price</div>
+                                        <div class="text-muted small" id="highestCity">--</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="stat-value" id="highestPrice">₹---</div>
+                                        <div class="text-muted small">Today</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="stat-title">Lowest Price</div>
+                                        <div class="text-muted small" id="lowestCity">--</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="stat-value" id="lowestPrice">₹---</div>
+                                        <div class="text-muted small">Today</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="stat-title">National Avg</div>
+                                        <div class="text-muted small">34 Cities</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="stat-value" id="nationalAvg">₹---</div>
+                                        <div class="stat-change" id="avgChange">--%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- National Price Map -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">Regional Price Distribution</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="priceMap" style="height: 400px;"></div>
+                    </div>
+                </div>
+                
+                <!-- Recent Trends -->
+                <div class="row">
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">National Price Trend (Last 30 Days)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="nationalTrendChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Top Movers</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>City</th>
+                                                <th>Price</th>
+                                                <th>Change</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="topMoversTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Daily View Tab -->
+            <div class="tab-pane fade" id="daily">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Daily Price Analysis</h1>
+                    <div class="d-flex">
+                        <input type="date" class="form-control me-2" id="dailyDate" style="width: 150px;">
+                        <select class="form-select" id="dailyCity" style="width: 200px;"></select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-primary">Daily Price Trend</h6>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary" id="dailyWeekBtn">1W</button>
+                                    <button class="btn btn-sm btn-outline-primary" id="dailyMonthBtn">1M</button>
+                                    <button class="btn btn-sm btn-outline-primary" id="dailyQuarterBtn">3M</button>
+                                    <button class="btn btn-sm btn-outline-primary" id="dailyYearBtn">1Y</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="dailyChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Today's Price</h6>
+                            </div>
+                            <div class="card-body text-center">
+                                <h2 class="text-primary" id="currentDailyPrice">₹---</h2>
+                                <div class="mb-3" id="dailyPriceChange">--% from yesterday</div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Price</th>
+                                                <th>Change</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dailyPriceTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">All Cities Prices</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table data-table" id="allCitiesTable">
+                                <thead>
+                                    <tr>
+                                        <th>City</th>
+                                        <th>Price</th>
+                                        <th>Change (1D)</th>
+                                        <th>Change (1W)</th>
+                                        <th>Change (1M)</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Monthly Trends Tab -->
+            <div class="tab-pane fade" id="monthly">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Monthly Price Trends</h1>
+                    <div class="d-flex">
+                        <select class="form-select me-2" id="monthlyCity" style="width: 200px;"></select>
+                        <input type="month" class="form-control" id="monthlyDate" style="width: 150px;">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-primary">Monthly Average Prices</h6>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary" id="monthly1YBtn">1Y</button>
+                                    <button class="btn btn-sm btn-outline-primary" id="monthly3YBtn">3Y</button>
+                                    <button class="btn btn-sm btn-outline-primary" id="monthly5YBtn">5Y</button>
+                                    <button class="btn btn-sm btn-outline-primary" id="monthlyAllBtn">All</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="monthlyChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Monthly Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Current Month:</span>
+                                        <strong id="currentMonth">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Average Price:</span>
+                                        <strong id="monthlyAvgPrice">₹---</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Monthly Change:</span>
+                                        <span id="monthlyChange">--%</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">YoY Change:</span>
+                                        <span id="yearlyChange">--%</span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="table-responsive">
+                                    <table class="table table-sm data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Month</th>
+                                                <th>Avg Price</th>
+                                                <th>Change</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="monthlyPriceTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">Seasonal Analysis</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="seasonalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Yearly Analysis Tab -->
+            <div class="tab-pane fade" id="yearly">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Yearly Price Analysis</h1>
+                    <div class="d-flex">
+                        <select class="form-select me-2" id="yearlyCity" style="width: 200px;"></select>
+                        <input type="number" class="form-control" id="yearlyYear" min="2009" style="width: 100px;">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Yearly Price Trend</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="yearlyChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Yearly Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Current Year:</span>
+                                        <strong id="currentYear">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Average Price:</span>
+                                        <strong id="yearlyAvgPrice">₹---</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">YoY Change:</span>
+                                        <span id="yearlyYoYChange">--%</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">5Y CAGR:</span>
+                                        <span id="yearlyCAGR">--%</span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="table-responsive">
+                                    <table class="table table-sm data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Year</th>
+                                                <th>Avg Price</th>
+                                                <th>Change</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="yearlyPriceTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">Monthly Breakdown</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="yearlyMonthlyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compare Cities Tab -->
+            <div class="tab-pane fade" id="compare">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">City Comparison</h1>
+                    <div class="d-flex">
+                        <select class="form-select me-2" id="compareCity1" style="width: 150px;"></select>
+                        <select class="form-select me-2" id="compareCity2" style="width: 150px;"></select>
+                        <select class="form-select me-2" id="compareCity3" style="width: 150px;">
+                            <option value="">None</option>
+                        </select>
+                        <input type="number" class="form-control" id="compareYear" min="2009" style="width: 100px;">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Price Comparison</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="compareChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Comparison Summary</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="compareSummary">
+                                    <!-- Filled by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Correlation Analysis</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="correlationChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Price Difference</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="differenceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Predictions Tab -->
+            <div class="tab-pane fade" id="predictions">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Price Predictions</h1>
+                    <div class="d-flex">
+                        <select class="form-select me-2" id="predictCity" style="width: 200px;"></select>
+                        <button class="btn btn-primary" id="refreshPredictions">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card prediction-card h-100">
+                            <div class="card-body text-center">
+                                <div class="prediction-title">Next Week</div>
+                                <div class="prediction-value" id="nextWeekPred">₹---</div>
+                                <div class="prediction-range">7-day forecast</div>
+                                <div class="mt-2 small text-muted" id="nextWeekModels">Using Holt-Winters</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card prediction-card h-100">
+                            <div class="card-body text-center">
+                                <div class="prediction-title">Next Month</div>
+                                <div class="prediction-value" id="nextMonthPred">₹---</div>
+                                <div class="prediction-range">30-day forecast</div>
+                                <div class="mt-2 small text-muted" id="nextMonthModels">Using Ensemble</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card prediction-card h-100">
+                            <div class="card-body text-center">
+                                <div class="prediction-title">Next Year</div>
+                                <div class="prediction-value" id="nextYearPred">₹---</div>
+                                <div class="prediction-range">12-month forecast</div>
+                                <div class="mt-2 small text-muted" id="nextYearModels">Using Ensemble</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card prediction-card h-100">
+                            <div class="card-body text-center">
+                                <div class="prediction-title">Next 12 Months</div>
+                                <div class="prediction-value" id="next12MonthsPred">₹---</div>
+                                <div class="prediction-range">Rolling forecast</div>
+                                <div class="mt-2 small text-muted" id="next12MonthsModels">Using Ensemble</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">Monthly Predictions vs Actual</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="predictionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Complete Year Forecast</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Month</th>
+                                                <th>Predicted</th>
+                                                <th>Actual</th>
+                                                <th>Difference</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="yearPredictionTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Next 12 Months Forecast</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Month</th>
+                                                <th>Predicted</th>
+                                                <th>Actual</th>
+                                                <th>Difference</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rollingPredictionTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- District Checker Tab -->
+            <div class="tab-pane fade" id="district">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">District Price Checker</h1>
+                    <div class="d-flex" style="width: 400px;">
+                        <select class="form-select" id="districtSelect"></select>
+                        <button class="btn btn-primary ms-2" id="checkDistrictPrice">
+                            <i class="bi bi-search"></i> Check
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">District Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Selected District:</span>
+                                        <strong id="districtName">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Nearest NECC City:</span>
+                                        <strong id="nearestCity">--</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted">Distance:</span>
+                                        <strong id="districtDistance">-- km</strong>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="text-center">
+                                    <h4 id="districtPrice">₹---</h4>
+                                    <small class="text-muted">Estimated price based on nearest NECC city</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Nearby Districts</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>District</th>
+                                                <th>Price</th>
+                                                <th>Distance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="nearbyDistrictsTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold text-primary">Price Predictions</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card prediction-card h-100">
+                                            <div class="card-body text-center">
+                                                <div class="prediction-title">Next Week</div>
+                                                <div class="prediction-value" id="districtNextWeek">₹---</div>
+                                                <div class="prediction-range">7-day forecast</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="card prediction-card h-100">
+                                            <div class="card-body text-center">
+                                                <div class="prediction-title">Next Month</div>
+                                                <div class="prediction-value" id="districtNextMonth">₹---</div>
+                                                <div class="prediction-range">30-day forecast</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mt-3">
+                                        <div class="card prediction-card h-100">
+                                            <div class="card-body text-center">
+                                                <div class="prediction-title">Next Year</div>
+                                                <div class="prediction-value" id="districtNextYear">₹---</div>
+                                                <div class="prediction-range">12-month forecast</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mt-3">
+                                        <div class="card prediction-card h-100">
+                                            <div class="card-body text-center">
+                                                <div class="prediction-title">Next 12 Months</div>
+                                                <div class="prediction-value" id="districtNext12Months">₹---</div>
+                                                <div class="prediction-range">Rolling forecast</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <div class="chart-container">
+                                        <canvas id="districtChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Price Alerts Tab -->
+            <div class="tab-pane fade" id="alerts">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Price Alerts</h1>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newAlertModal">
+                        <i class="bi bi-plus-circle"></i> New Alert
+                    </button>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">Your Active Alerts</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table data-table">
+                                <thead>
+                                    <tr>
+                                        <th>City/District</th>
+                                        <th>Condition</th>
+                                        <th>Target Price</th>
+                                        <th>Current Price</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alertsTable">
+                                    <!-- Filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">Alert History</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>City/District</th>
+                                        <th>Condition</th>
+                                        <th>Trigger Price</th>
+                                        <th>Actual Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alertHistoryTable">
+                                    <!-- Filled by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- New Alert Modal -->
+    <div class="modal fade" id="newAlertModal" tabindex="-1" aria-labelledby="newAlertModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newAlertModalLabel">Create New Price Alert</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="alertForm">
+                        <div class="mb-3">
+                            <label for="alertLocationType" class="form-label">Location Type</label>
+                            <select class="form-select" id="alertLocationType">
+                                <option value="city">NECC City</option>
+                                <option value="district">District</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3" id="alertCityContainer">
+                            <label for="alertCity" class="form-label">City</label>
+                            <select class="form-select" id="alertCity"></select>
+                        </div>
+                        
+                        <div class="mb-3 d-none" id="alertDistrictContainer">
+                            <label for="alertDistrict" class="form-label">District</label>
+                            <select class="form-select" id="alertDistrict"></select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="alertCondition" class="form-label">Alert Condition</label>
+                            <select class="form-select" id="alertCondition">
+                                <option value="above">Price goes above</option>
+                                <option value="below">Price goes below</option>
+                                <option value="change">Price changes by</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="alertValue" class="form-label">Price (₹)</label>
+                            <input type="number" class="form-control" id="alertValue" step="0.01" min="0">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="alertNotification" class="form-label">Notification Method</label>
+                            <select class="form-select" id="alertNotification">
+                                <option value="email">Email</option>
+                                <option value="sms">SMS</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveAlert">Save Alert</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.0.1/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0/dist/chartjs-adapter-luxon.min.js"></script>
+    
+    <script>
+        // Global variables
+        let charts = {};
+        let currentDate = luxon.DateTime.now().toISODate();
+        let cities = [];
+        let districts = [];
+        
+        // Initialize the application
+	$(document).ready(function() {
+    	    // Initialize select2
+	    $('.form-select').select2({
+        	width: '100%',
+        	theme: 'bootstrap-5'
+	    });
+	
+	    // Load initial data
+	    loadCities();
+	    loadDistricts();
+	    updateLastUpdated();
+	    updateDashboardStats();
+
+	    // Set up event listeners
+	    $('#todayCity').on('change', updateDashboardStats);
+	    $('#dailyCity, #dailyDate').on('change', updateDailyView);
+	    $('#monthlyCity, #monthlyDate').on('change', updateMonthlyView);
+	    $('#yearlyCity, #yearlyYear').on('change', updateYearlyView);
+	    $('#compareCity1, #compareCity2, #compareCity3, #compareYear').on('change', updateCompareView);
+	    $('#predictCity').on('change', updatePredictions);
+	    $('#refreshPredictions').on('click', updatePredictions);
+	    $('#districtSelect').on('change', updateDistrictView);
+	    $('#checkDistrictPrice').on('click', updateDistrictView);
+	    $('#searchButton').on('click', searchCity);
+
+	    // Time range buttons
+	    $('#dailyWeekBtn, #dailyMonthBtn, #dailyQuarterBtn, #dailyYearBtn').on('click', function() {
+	        setDailyTimeRange($(this).attr('id'));
+	    });
+
+	    $('#monthly1YBtn, #monthly3YBtn, #monthly5YBtn, #monthlyAllBtn').on('click', function() {
+	        setMonthlyTimeRange($(this).attr('id'));
+	    });
+	
+	    // Initialize Bootstrap tabs
+	    $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+	        const target = $(e.target).attr('href');
+	        
+	        // Hide all content divs first
+	        $('.tab-pane').removeClass('show active');
+        
+	        // Show the selected tab content
+	        $(target).addClass('show active');
+        
+	        // Load data for the selected tab
+	        if (target === '#daily') {
+	            updateDailyView();
+	        } else if (target === '#monthly') {
+	            updateMonthlyView();
+	        } else if (target === '#yearly') {
+	            updateYearlyView();
+	        } else if (target === '#compare') {
+	            updateCompareView();
+	        } else if (target === '#predictions') {
+	            updatePredictions();
+	        } else if (target === '#district') {
+	            updateDistrictView();
+	        } else if (target === '#alerts') {
+	            loadAlerts();
+	        }
+	    });
+
+	    // Activate the first tab by default
+	    $('a[href="#dashboard"]').tab('show');
+	    $('#dashboard').addClass('show active');
+	
+	    // Alert form handling
+	    $('#alertLocationType').on('change', function() {
+	        if ($(this).val() === 'city') {
+	            $('#alertCityContainer').removeClass('d-none');
+	            $('#alertDistrictContainer').addClass('d-none');
+	        } else {
+	            $('#alertCityContainer').addClass('d-none');
+	            $('#alertDistrictContainer').removeClass('d-none');
+	        }
+	    });
+	
+	    $('#saveAlert').on('click', saveAlert);
+	});
+        
+        // Load cities from API
+        function loadCities() {
+            $.get('/api/cities', function(data) {
+                cities = data.cities;
+                
+                // Populate city dropdowns
+                const cityDropdowns = [
+                    '#todayCity', '#dailyCity', '#monthlyCity', 
+                    '#yearlyCity', '#compareCity1', '#compareCity2', 
+                    '#compareCity3', '#predictCity', '#alertCity'
+                ];
+                
+                cityDropdowns.forEach(selector => {
+                    const select = $(selector);
+                    select.empty();
+                    select.append($('<option>').val('').text('Select city'));
+                    
+                    cities.forEach(city => {
+                        select.append($('<option>').val(city).text(city));
+                    });
+                    
+                    if (selector === '#todayCity' || selector === '#dailyCity' || 
+                        selector === '#monthlyCity' || selector === '#yearlyCity' || 
+                        selector === '#predictCity' || selector === '#compareCity1') {
+                        select.val(cities[0]).trigger('change');
+                    } else if (selector === '#compareCity2') {
+                        select.val(cities[1] || cities[0]).trigger('change');
+                    }
+                });
+                
+                // Set default dates
+                $('#dailyDate').val(currentDate);
+                $('#monthlyDate').val(currentDate.substring(0, 7));
+                $('#yearlyYear').val(currentDate.substring(0, 4));
+                $('#compareYear').val(currentDate.substring(0, 4));
+            }).fail(function() {
+                console.error('Failed to load cities');
+            });
+        }
+        
+        // Load districts from API
+        function loadDistricts() {
+            $.get('/api/districts', function(data) {
+                districts = data.districts;
+                
+                // Populate district dropdowns
+                const districtSelect = $('#districtSelect');
+                const alertDistrict = $('#alertDistrict');
+                
+                districtSelect.empty();
+                alertDistrict.empty();
+                districtSelect.append($('<option>').val('').text('Select district'));
+                alertDistrict.append($('<option>').val('').text('Select district'));
+                
+                districts.forEach(district => {
+                    districtSelect.append($('<option>').val(district).text(district));
+                    alertDistrict.append($('<option>').val(district).text(district));
+                });
+                
+                if (districts.length > 0) {
+                    districtSelect.val(districts[0]).trigger('change');
+                }
+            }).fail(function() {
+                console.error('Failed to load districts');
+            });
+        }
+        
+        // Update last updated time
+        function updateLastUpdated() {
+            const now = luxon.DateTime.now();
+            $('#last-updated').text(now.toLocaleString(luxon.DateTime.DATETIME_MED));
+        }
+        
+        // Update dashboard statistics
+        function updateDashboardStats() {
+            const city = $('#todayCity').val();
+            const date = currentDate;
+            
+            // Get today's price for selected city
+            $.get(`/api/price?city=${city}&date=${date}`, function(data) {
+                if (data.price) {
+                    $('#todayPrice').text(`₹${data.price.toFixed(2)}`);
+                    
+                    // Get yesterday's price for change calculation
+                    const yesterday = luxon.DateTime.fromISO(date).minus({days: 1}).toISODate();
+                    $.get(`/api/price?city=${city}&date=${yesterday}`, function(yesterdayData) {
+                        if (yesterdayData.price) {
+                            const change = ((data.price - yesterdayData.price) / yesterdayData.price * 100).toFixed(1);
+                            $('#todayChange').text(`${change}%`);
+                            $('#todayChange').removeClass('positive negative').addClass(change >= 0 ? 'positive' : 'negative');
+                        }
+                    });
+                }
+            });
+            
+            // Get all cities prices for today
+            $.get(`/api/price?city=all&date=${date}`, function(data) {
+                if (data.prices && data.prices.length > 0) {
+                    // Calculate stats
+                    const prices = data.prices.filter(p => p.price !== null);
+                    const maxPrice = Math.max(...prices.map(p => p.price));
+                    const minPrice = Math.min(...prices.map(p => p.price));
+                    const avgPrice = prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
+                    
+                    // Update UI
+                    $('#highestPrice').text(`₹${maxPrice.toFixed(2)}`);
+                    $('#highestCity').text(prices.find(p => p.price === maxPrice).city);
+                    
+                    $('#lowestPrice').text(`₹${minPrice.toFixed(2)}`);
+                    $('#lowestCity').text(prices.find(p => p.price === minPrice).city);
+                    
+                    $('#nationalAvg').text(`₹${avgPrice.toFixed(2)}`);
+                    
+                    // Calculate change from yesterday
+                    const yesterday = luxon.DateTime.fromISO(date).minus({days: 1}).toISODate();
+                    $.get(`/api/price?city=all&date=${yesterday}`, function(yesterdayData) {
+                        if (yesterdayData.prices && yesterdayData.prices.length > 0) {
+                            const yesterdayPrices = yesterdayData.prices.filter(p => p.price !== null);
+                            const yesterdayAvg = yesterdayPrices.reduce((sum, p) => sum + p.price, 0) / yesterdayPrices.length;
+                            const change = ((avgPrice - yesterdayAvg) / yesterdayAvg * 100).toFixed(1);
+                            $('#avgChange').text(`${change}%`);
+                            $('#avgChange').removeClass('positive negative').addClass(change >= 0 ? 'positive' : 'negative');
+                        }
+                    });
+                    
+                    // Update top movers table
+                    updateTopMoversTable(data.prices);
+                    
+                    // Update national trend chart
+                    updateNationalTrendChart();
+                }
+            });
+        }
+        
+        // Update top movers table
+        function updateTopMoversTable(prices) {
+            const table = $('#topMoversTable');
+            table.empty();
+            
+            // Sort by price change (need to get yesterday's prices first)
+            const yesterday = luxon.DateTime.fromISO(currentDate).minus({days: 1}).toISODate();
+            $.get(`/api/price?city=all&date=${yesterday}`, function(yesterdayData) {
+                if (yesterdayData.prices) {
+                    const priceChanges = prices.map(p => {
+                        const yesterdayPrice = yesterdayData.prices.find(yp => yp.city === p.city);
+                        const change = yesterdayPrice ? 
+                            ((p.price - yesterdayPrice.price) / yesterdayPrice.price * 100).toFixed(1) : 0;
+                        return {
+                            city: p.city,
+                            price: p.price,
+                            change: parseFloat(change)
+                        };
+                    });
+                    
+                    // Sort by absolute change
+                    priceChanges.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+                    
+                    // Show top 5
+                    priceChanges.slice(0, 5).forEach(item => {
+                        const row = $('<tr>');
+                        row.append($('<td>').text(item.city));
+                        row.append($('<td>').text(`₹${item.price.toFixed(2)}`));
+                        
+                        const changeCell = $('<td>');
+                        const changeSpan = $('<span>').addClass('price-change');
+                        changeSpan.text(`${item.change > 0 ? '+' : ''}${item.change}%`);
+                        
+                        if (item.change > 0) {
+                            changeSpan.addClass('positive');
+                        } else if (item.change < 0) {
+                            changeSpan.addClass('negative');
+                        } else {
+                            changeSpan.addClass('neutral');
+                        }
+                        
+                        changeCell.append(changeSpan);
+                        row.append(changeCell);
+                        table.append(row);
+                    });
+                }
+            });
+        }
+        
+        // Update national trend chart
+        function updateNationalTrendChart() {
+            const startDate = luxon.DateTime.fromISO(currentDate).minus({days: 30}).toISODate();
+            
+            $.get(`/api/price/range?city=all&start=${startDate}&end=${currentDate}`, function(data) {
+                if (data.prices) {
+                    // Group by date and calculate average
+                    const dateGroups = {};
+                    data.prices.forEach(p => {
+                        if (!dateGroups[p.date]) {
+                            dateGroups[p.date] = [];
+                        }
+                        dateGroups[p.date].push(p.price);
+                    });
+                    
+                    const dates = Object.keys(dateGroups).sort();
+                    const avgPrices = dates.map(date => {
+                        const prices = dateGroups[date];
+                        return prices.reduce((sum, p) => sum + p, 0) / prices.length;
+                    });
+                    
+                    // Create or update chart
+                    const ctx = document.getElementById('nationalTrendChart').getContext('2d');
+                    
+                    if (charts.nationalTrendChart) {
+                        charts.nationalTrendChart.data.labels = dates;
+                        charts.nationalTrendChart.data.datasets[0].data = avgPrices;
+                        charts.nationalTrendChart.update();
+                    } else {
+                        charts.nationalTrendChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: dates,
+                                datasets: [{
+                                    label: 'National Average Price',
+                                    data: avgPrices,
+                                    borderColor: 'rgba(78, 115, 223, 1)',
+                                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'top'
+                                    },
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: false
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Date'
+                                        }
+                                    },
+                                    y: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Price (₹)'
+                                        },
+                                        beginAtZero: false
+                                    }
+                                },
+                                interaction: {
+                                    mode: 'nearest',
+                                    axis: 'x',
+                                    intersect: false
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Update daily view
+	function updateDailyView() {
+	    const city = $('#dailyCity').val();
+	    const date = $('#dailyDate').val();
+    
+	    if (!city || !date) return;
+    
+	    $.get(`/api/price?city=${city}&date=${date}`)
+	        .done(function(data) {
+	            if (data.price) {
+	                $('#currentDailyPrice').text(`₹${data.price.toFixed(2)}`);
+                
+	                // Get yesterday's price for change
+	                const yesterday = luxon.DateTime.fromISO(date).minus({days: 1}).toISODate();
+	                $.get(`/api/price?city=${city}&date=${yesterday}`)
+	                    .done(function(yesterdayData) {
+	                        if (yesterdayData.price) {
+	                            const change = ((data.price - yesterdayData.price) / yesterdayData.price * 100).toFixed(1);
+	                            $('#dailyPriceChange').text(`${change}% from yesterday`);
+	                            $('#dailyPriceChange').removeClass('positive negative').addClass(change >= 0 ? 'positive' : 'negative');
+	                        }
+	                    })
+	                    .fail(function() {
+	                        console.error('Failed to get yesterday price');
+	                    });
+	            }
+	        })
+	        .fail(function() {
+	            console.error('Failed to get daily price');
+	        });
+	    
+	    // Get last 7 days prices
+	    const startDate = luxon.DateTime.fromISO(date).minus({days: 7}).toISODate();
+	    $.get(`/api/price/range?city=${city}&start=${startDate}&end=${date}`)
+	        .done(function(data) {
+	            if (data.prices) {
+	                // Update table and chart
+	                updateDailyPriceTable(data.prices);
+	                updateDailyChart(data.prices);
+	            }
+	        })
+	        .fail(function() {
+	            console.error('Failed to get price range');
+	        });
+	    
+	    // Update all cities table
+	    updateAllCitiesTable(date);
+	}
+        
+        // Update daily chart
+        function updateDailyChart(prices) {
+            const ctx = document.getElementById('dailyChart').getContext('2d');
+            const labels = prices.map(p => p.date);
+            const data = prices.map(p => p.price);
+            
+            if (charts.dailyChart) {
+                charts.dailyChart.data.labels = labels;
+                charts.dailyChart.data.datasets[0].data = data;
+                charts.dailyChart.update();
+            } else {
+                charts.dailyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Daily Price',
+                            data: data,
+                            borderColor: 'rgba(78, 115, 223, 1)',
+                            backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            zoom: {
+                                zoom: {
+                                    wheel: {
+                                        enabled: true
+                                    },
+                                    pinch: {
+                                        enabled: true
+                                    },
+                                    mode: 'x'
+                                },
+                                pan: {
+                                    enabled: true,
+                                    mode: 'x'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price (₹)'
+                                },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Set daily time range
+        function setDailyTimeRange(range) {
+            const date = $('#dailyDate').val();
+            let days = 7;
+            
+            switch(range) {
+                case 'dailyWeekBtn':
+                    days = 7;
+                    break;
+                case 'dailyMonthBtn':
+                    days = 30;
+                    break;
+                case 'dailyQuarterBtn':
+                    days = 90;
+                    break;
+                case 'dailyYearBtn':
+                    days = 365;
+                    break;
+            }
+            
+            const startDate = luxon.DateTime.fromISO(date).minus({days: days}).toISODate();
+            const city = $('#dailyCity').val();
+            
+            $.get(`/api/price/range?city=${city}&start=${startDate}&end=${date}`, function(data) {
+                if (data.prices) {
+                    updateDailyChart(data.prices);
+                }
+            });
+        }
+        
+        // Update all cities table
+        function updateAllCitiesTable(date) {
+            $.get(`/api/price?city=all&date=${date}`, function(data) {
+                if (data.prices) {
+                    const table = $('#allCitiesTable tbody');
+                    table.empty();
+                    
+                    // Get prices for yesterday, last week, and last month for changes
+                    const yesterday = luxon.DateTime.fromISO(date).minus({days: 1}).toISODate();
+                    const lastWeek = luxon.DateTime.fromISO(date).minus({days: 7}).toISODate();
+                    const lastMonth = luxon.DateTime.fromISO(date).minus({days: 30}).toISODate();
+                    
+                    Promise.all([
+                        $.get(`/api/price?city=all&date=${yesterday}`),
+                        $.get(`/api/price?city=all&date=${lastWeek}`),
+                        $.get(`/api/price?city=all&date=${lastMonth}`)
+                    ]).then(([yesterdayData, lastWeekData, lastMonthData]) => {
+                        data.prices.forEach(cityPrice => {
+                            const row = $('<tr>');
+                            row.append($('<td>').text(cityPrice.city));
+                            row.append($('<td>').text(`₹${cityPrice.price.toFixed(2)}`));
+                            
+                            // 1D change
+                            const yesterdayPrice = yesterdayData.prices.find(p => p.city === cityPrice.city);
+                            const change1D = yesterdayPrice ? 
+                                ((cityPrice.price - yesterdayPrice.price) / yesterdayPrice.price * 100).toFixed(1) : 'N/A';
+                            row.append(createChangeCell(change1D));
+                            
+                            // 1W change
+                            const lastWeekPrice = lastWeekData.prices.find(p => p.city === cityPrice.city);
+                            const change1W = lastWeekPrice ? 
+                                ((cityPrice.price - lastWeekPrice.price) / lastWeekPrice.price * 100).toFixed(1) : 'N/A';
+                            row.append(createChangeCell(change1W));
+                            
+                            // 1M change
+                            const lastMonthPrice = lastMonthData.prices.find(p => p.city === cityPrice.city);
+                            const change1M = lastMonthPrice ? 
+                                ((cityPrice.price - lastMonthPrice.price) / lastMonthPrice.price * 100).toFixed(1) : 'N/A';
+                            row.append(createChangeCell(change1M));
+                            
+                            // Actions
+                            const actions = $('<td>');
+                            actions.append($('<button>').addClass('btn btn-sm btn-outline-primary me-1').html('<i class="bi bi-graph-up"></i>'));
+                            actions.append($('<button>').addClass('btn btn-sm btn-outline-secondary').html('<i class="bi bi-bell"></i>'));
+                            row.append(actions);
+                            
+                            table.append(row);
+                        });
+                    });
+                }
+            });
+        }
+        
+        // Create change cell for table
+        function createChangeCell(change) {
+            if (change === 'N/A') {
+                return $('<td>').text('N/A');
+            }
+            
+            const changeNum = parseFloat(change);
+            const cell = $('<td>');
+            const span = $('<span>').addClass('price-change');
+            span.text(`${changeNum > 0 ? '+' : ''}${change}%`);
+            
+            if (changeNum > 0) {
+                span.addClass('positive');
+            } else if (changeNum < 0) {
+                span.addClass('negative');
+            } else {
+                span.addClass('neutral');
+            }
+            
+            cell.append(span);
+            return cell;
+        }
+        
+        // Update monthly view
+        function updateMonthlyView() {
+            const city = $('#monthlyCity').val();
+            const month = $('#monthlyDate').val();
+            
+            // Get monthly data for the selected month
+            const year = month.substring(0, 4);
+            const monthNum = month.substring(5, 7);
+            
+            $.get(`/api/monthly?city=${city}&year=${year}&month=${monthNum}`, function(data) {
+                if (data.avg_price) {
+                    $('#currentMonth').text(luxon.DateTime.fromISO(`${year}-${monthNum}-01`).toFormat('MMMM yyyy'));
+                    $('#monthlyAvgPrice').text(`₹${data.avg_price.toFixed(2)}`);
+                    
+                    // Get previous month for change calculation
+                    const prevMonth = luxon.DateTime.fromISO(`${year}-${monthNum}-01`).minus({months: 1});
+                    const prevYear = prevMonth.year;
+                    const prevMonthNum = prevMonth.month.toString().padStart(2, '0');
+                    
+                    $.get(`/api/monthly?city=${city}&year=${prevYear}&month=${prevMonthNum}`, function(prevData) {
+                        if (prevData.avg_price) {
+                            const change = ((data.avg_price - prevData.avg_price) / prevData.avg_price * 100).toFixed(1);
+                            $('#monthlyChange').text(`${change}%`);
+                            $('#monthlyChange').removeClass('positive negative').addClass(change >= 0 ? 'positive' : 'negative');
+                        }
+                    });
+                    
+                    // Get same month last year for YoY change
+                    const lastYear = parseInt(year) - 1;
+                    $.get(`/api/monthly?city=${city}&year=${lastYear}&month=${monthNum}`, function(lastYearData) {
+                        if (lastYearData.avg_price) {
+                            const change = ((data.avg_price - lastYearData.avg_price) / lastYearData.avg_price * 100).toFixed(1);
+                            $('#yearlyChange').text(`${change}%`);
+                            $('#yearlyChange').removeClass('positive negative').addClass(change >= 0 ? 'positive' : 'negative');
+                        }
+                    });
+                }
+            });
+            
+            // Get last 12 months data
+            const startDate = luxon.DateTime.fromISO(`${year}-${monthNum}-01`).minus({months: 12}).toISODate();
+            const endDate = luxon.DateTime.fromISO(`${year}-${monthNum}-01`).endOf('month').toISODate();
+            
+            $.get(`/api/monthly/range?city=${city}&start=${startDate}&end=${endDate}`, function(data) {
+                if (data.avgs) {
+                    // Update table
+                    const table = $('#monthlyPriceTable');
+                    table.empty();
+                    
+                    data.avgs.forEach((avg, index) => {
+                        const row = $('<tr>');
+                        const date = luxon.DateTime.fromObject({
+                            year: parseInt(avg.year),
+                            month: parseInt(avg.month),
+                            day: 1
+                        }).toFormat('MMM yyyy');
+                        
+                        row.append($('<td>').text(date));
+                        row.append($('<td>').text(`₹${avg.avg_price.toFixed(2)}`));
+                        
+                        if (index > 0) {
+                            const prevAvg = data.avgs[index - 1].avg_price;
+                            const change = ((avg.avg_price - prevAvg) / prevAvg * 100).toFixed(1);
+                            
+                            const changeCell = $('<td>');
+                            const changeSpan = $('<span>').addClass('price-change');
+                            changeSpan.text(`${change > 0 ? '+' : ''}${change}%`);
+                            
+                            if (change > 0) {
+                                changeSpan.addClass('positive');
+                            } else if (change < 0) {
+                                changeSpan.addClass('negative');
+                            } else {
+                                changeSpan.addClass('neutral');
+                            }
+                            
+                            changeCell.append(changeSpan);
+                            row.append(changeCell);
+                        } else {
+                            row.append($('<td>').text('N/A'));
+                        }
+                        
+                        table.append(row);
+                    });
+                    
+                    // Update chart
+                    updateMonthlyChart(data.avgs);
+                    
+                    // Update seasonal chart
+                    updateSeasonalChart(data.avgs);
+                }
+            });
+        }
+        
+        // Update monthly chart
+        function updateMonthlyChart(avgs) {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            const labels = avgs.map(a => 
+                luxon.DateTime.fromObject({
+                    year: parseInt(a.year),
+                    month: parseInt(a.month),
+                    day: 1
+                }).toFormat('MMM yyyy')
+            );
+            const data = avgs.map(a => a.avg_price);
+            
+            if (charts.monthlyChart) {
+                charts.monthlyChart.data.labels = labels;
+                charts.monthlyChart.data.datasets[0].data = data;
+                charts.monthlyChart.update();
+            } else {
+                charts.monthlyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Monthly Average Price',
+                            data: data,
+                            borderColor: 'rgba(78, 115, 223, 1)',
+                            backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            zoom: {
+                                zoom: {
+                                    wheel: {
+                                        enabled: true
+                                    },
+                                    pinch: {
+                                        enabled: true
+                                    },
+                                    mode: 'x'
+                                },
+                                pan: {
+                                    enabled: true,
+                                    mode: 'x'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price (₹)'
+                                },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Set monthly time range
+        function setMonthlyTimeRange(range) {
+            const month = $('#monthlyDate').val();
+            const year = month.substring(0, 4);
+            const monthNum = month.substring(5, 7);
+            const city = $('#monthlyCity').val();
+            
+            let years = 1;
+            
+            switch(range) {
+                case 'monthly1YBtn':
+                    years = 1;
+                    break;
+                case 'monthly3YBtn':
+                    years = 3;
+                    break;
+                case 'monthly5YBtn':
+                    years = 5;
+                    break;
+                case 'monthlyAllBtn':
+                    years = 15; // Max in API
+                    break;
+            }
+            
+            const startDate = luxon.DateTime.fromISO(`${year}-${monthNum}-01`).minus({years: years}).toISODate();
+            const endDate = luxon.DateTime.fromISO(`${year}-${monthNum}-01`).endOf('month').toISODate();
+            
+            $.get(`/api/monthly/range?city=${city}&start=${startDate}&end=${endDate}`, function(data) {
+                if (data.avgs) {
+                    updateMonthlyChart(data.avgs);
+                }
+            });
+        }
+        
+        // Update seasonal chart
+        function updateSeasonalChart(avgs) {
+            // Group by month across years
+            const monthlyGroups = {};
+            avgs.forEach(avg => {
+                const month = parseInt(avg.month);
+                if (!monthlyGroups[month]) {
+                    monthlyGroups[month] = [];
+                }
+                monthlyGroups[month].push(avg.avg_price);
+            });
+            
+            // Calculate average for each month
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthlyAverages = [];
+            
+            for (let month = 1; month <= 12; month++) {
+                if (monthlyGroups[month]) {
+                    const avg = monthlyGroups[month].reduce((sum, price) => sum + price, 0) / monthlyGroups[month].length;
+                    monthlyAverages.push({
+                        month: monthNames[month - 1],
+                        average: avg
+                    });
+                }
+            }
+            
+            // Create or update chart
+            const ctx = document.getElementById('seasonalChart').getContext('2d');
+            const labels = monthlyAverages.map(m => m.month);
+            const data = monthlyAverages.map(m => m.average);
+            
+            if (charts.seasonalChart) {
+                charts.seasonalChart.data.labels = labels;
+                charts.seasonalChart.data.datasets[0].data = data;
+                charts.seasonalChart.update();
+            } else {
+                charts.seasonalChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Seasonal Average Price',
+                            data: data,
+                            backgroundColor: 'rgba(78, 115, 223, 0.7)',
+                            borderColor: 'rgba(78, 115, 223, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price (₹)'
+                                },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update yearly view
+        function updateYearlyView() {
+            const city = $('#yearlyCity').val();
+            const year = $('#yearlyYear').val();
+            
+            // Get yearly average
+            $.get(`/api/yearly?city=${city}&year=${year}`, function(data) {
+                if (data.avg_price) {
+                    $('#currentYear').text(year);
+                    $('#yearlyAvgPrice').text(`₹${data.avg_price.toFixed(2)}`);
+                    
+                    // Get previous year for YoY change
+                    const prevYear = parseInt(year) - 1;
+                    $.get(`/api/yearly?city=${city}&year=${prevYear}`, function(prevData) {
+                        if (prevData.avg_price) {
+                            const change = ((data.avg_price - prevData.avg_price) / prevData.avg_price * 100).toFixed(1);
+                            $('#yearlyYoYChange').text(`${change}%`);
+                            $('#yearlyYoYChange').removeClass('positive negative').addClass(change >= 0 ? 'positive' : 'negative');
+                        }
+                    });
+                    
+                    // Get 5 years ago for CAGR
+                    const fiveYearsAgo = parseInt(year) - 5;
+                    if (fiveYearsAgo >= 2009) { // Assuming data starts from 2009
+                        $.get(`/api/yearly?city=${city}&year=${fiveYearsAgo}`, function(fiveYearsAgoData) {
+                            if (fiveYearsAgoData.avg_price) {
+                                const cagr = (Math.pow(data.avg_price / fiveYearsAgoData.avg_price, 1/5) - 1) * 100;
+                                $('#yearlyCAGR').text(`${cagr.toFixed(1)}%`);
+                                $('#yearlyCAGR').removeClass('positive negative').addClass(cagr >= 0 ? 'positive' : 'negative');
+                            }
+                        });
+                    }
+                }
+            });
+            
+            // Get yearly range data (last 8 years)
+            const startYear = parseInt(year) - 8;
+            const endYear = year;
+            
+            $.get(`/api/yearly/range?city=${city}&start=${startYear}&end=${endYear}`, function(data) {
+                if (data.avgs) {
+                    // Group by year and calculate yearly average
+                    const yearlyGroups = {};
+                    data.avgs.forEach(avg => {
+                        if (!yearlyGroups[avg.year]) {
+                            yearlyGroups[avg.year] = [];
+                        }
+                        yearlyGroups[avg.year].push(avg.avg_price);
+                    });
+                    
+                    const yearlyAverages = [];
+                    for (const year in yearlyGroups) {
+                        const avg = yearlyGroups[year].reduce((sum, price) => sum + price, 0) / yearlyGroups[year].length;
+                        yearlyAverages.push({
+                            year: year,
+                            average: avg
+                        });
+                    }
+                    
+                    yearlyAverages.sort((a, b) => a.year.localeCompare(b.year));
+                    
+                    // Update table
+                    const table = $('#yearlyPriceTable');
+                    table.empty();
+                    
+                    yearlyAverages.forEach((avg, index) => {
+                        const row = $('<tr>');
+                        row.append($('<td>').text(avg.year));
+                        row.append($('<td>').text(`₹${avg.average.toFixed(2)}`));
+                        
+                        if (index > 0) {
+                            const prevAvg = yearlyAverages[index - 1].average;
+                            const change = ((avg.average - prevAvg) / prevAvg * 100).toFixed(1);
+                            
+                            const changeCell = $('<td>');
+                            const changeSpan = $('<span>').addClass('price-change');
+                            changeSpan.text(`${change > 0 ? '+' : ''}${change}%`);
+                            
+                            if (change > 0) {
+                                changeSpan.addClass('positive');
+                            } else if (change < 0) {
+                                changeSpan.addClass('negative');
+                            } else {
+                                changeSpan.addClass('neutral');
+                            }
+                            
+                            changeCell.append(changeSpan);
+                            row.append(changeCell);
+                        } else {
+                            row.append($('<td>').text('N/A'));
+                        }
+                        
+                        table.append(row);
+                    });
+                    
+                    // Update yearly chart
+                    updateYearlyChart(yearlyAverages);
+                    
+                    // Update yearly monthly breakdown chart
+                    updateYearlyMonthlyChart(data.avgs);
+                }
+            });
+        }
+        
+        // Update yearly chart
+        function updateYearlyChart(yearlyAverages) {
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            const labels = yearlyAverages.map(y => y.year);
+            const data = yearlyAverages.map(y => y.average);
+            
+            if (charts.yearlyChart) {
+                charts.yearlyChart.data.labels = labels;
+                charts.yearlyChart.data.datasets[0].data = data;
+                charts.yearlyChart.update();
+            } else {
+                charts.yearlyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Yearly Average Price',
+                            data: data,
+                            borderColor: 'rgba(78, 115, 223, 1)',
+                            backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Year'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price (₹)'
+                                },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update yearly monthly breakdown chart
+        function updateYearlyMonthlyChart(avgs) {
+            // Filter for the selected year
+            const year = $('#yearlyYear').val();
+            const yearAvgs = avgs.filter(a => a.year === year);
+            
+            if (yearAvgs.length === 0) return;
+            
+            // Sort by month
+            yearAvgs.sort((a, b) => parseInt(a.month) - parseInt(b.month));
+            
+            // Create or update chart
+            const ctx = document.getElementById('yearlyMonthlyChart').getContext('2d');
+            const labels = yearAvgs.map(a => 
+                luxon.DateTime.fromObject({
+                    year: parseInt(a.year),
+                    month: parseInt(a.month),
+                    day: 1
+                }).toFormat('MMM')
+            );
+            const data = yearAvgs.map(a => a.avg_price);
+            
+            if (charts.yearlyMonthlyChart) {
+                charts.yearlyMonthlyChart.data.labels = labels;
+                charts.yearlyMonthlyChart.data.datasets[0].data = data;
+                charts.yearlyMonthlyChart.update();
+            } else {
+                charts.yearlyMonthlyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Monthly Average Price',
+                            data: data,
+                            backgroundColor: 'rgba(78, 115, 223, 0.7)',
+                            borderColor: 'rgba(78, 115, 223, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price (₹)'
+                                },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update compare view
+        function updateCompareView() {
+            const city1 = $('#compareCity1').val();
+            const city2 = $('#compareCity2').val();
+            const city3 = $('#compareCity3').val();
+            const year = $('#compareYear').val();
+            
+            // Get data for all selected cities
+            const citiesToCompare = [city1, city2];
+            if (city3) citiesToCompare.push(city3);
+            
+            Promise.all(
+                citiesToCompare.map(city => 
+                    $.get(`/api/yearly/range?city=${city}&start=${year}&end=${year}`)
+                )
+            ).then(results => {
+                const allData = results.map((result, index) => ({
+                    city: citiesToCompare[index],
+                    data: result.avgs || []
+                }));
+                
+                // Prepare data for chart
+                const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const datasets = [];
+                
+                allData.forEach(cityData => {
+                    // Filter for the selected year and sort by month
+                    const yearData = cityData.data
+                        .filter(a => a.year === year)
+                        .sort((a, b) => parseInt(a.month) - parseInt(b.month));
+                    
+                    if (yearData.length > 0) {
+                        datasets.push({
+                            label: cityData.city,
+                            data: yearData.map(a => a.avg_price),
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4
+                        });
+                    }
+                });
+                
+                // Assign colors to datasets
+                const colors = [
+                    'rgba(78, 115, 223, 1)',
+                    'rgba(231, 74, 59, 1)',
+                    'rgba(28, 200, 138, 1)'
+                ];
+                
+                datasets.forEach((dataset, index) => {
+                    dataset.borderColor = colors[index];
+                    dataset.backgroundColor = colors[index].replace('1)', '0.1)');
+                });
+                
+                // Update compare chart
+                updateCompareChart(labels, datasets);
+                
+                // Update comparison summary
+                updateComparisonSummary(allData, year);
+                
+                // Update correlation chart if comparing 2 cities
+                if (citiesToCompare.length === 2) {
+                    updateCorrelationChart(allData[0].data, allData[1].data);
+                }
+                
+                // Update difference chart if comparing 2 cities
+                if (citiesToCompare.length === 2) {
+                    updateDifferenceChart(allData[0].data, allData[1].data, year);
+                }
+            });
+        }
+        
+        // Update compare chart
+        function updateCompareChart(labels, datasets) {
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            
+            if (charts.compareChart) {
+                charts.compareChart.data.labels = labels;
+                charts.compareChart.data.datasets = datasets;
+                charts.compareChart.update();
+            } else {
+                charts.compareChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Price (₹)'
+                                },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update comparison summary
+        function updateComparisonSummary(allData, year) {
+            const summary = $('#compareSummary');
+            summary.empty();
+            
+            allData.forEach(cityData => {
+                const yearData = cityData.data.filter(a => a.year === year);
+                if (yearData.length === 0) return;
+                
+                // Calculate yearly average
+                const yearlyAvg = yearData.reduce((sum, a) => sum + a.avg_price, 0) / yearData.length;
+                
+                // Find min and max months
+                let minMonth = null, maxMonth = null;
+                let minPrice = Infinity, maxPrice = -Infinity;
+                
+                yearData.forEach(a => {
+                    if (a.avg_price < minPrice) {
+                        minPrice = a.avg_price;
+                        minMonth = a.month;
+                    }
+                    if (a.avg_price > maxPrice) {
+                        maxPrice = a.avg_price;
+                        maxMonth = a.month;
+                    }
+                });
+                
+                const cityDiv = $('<div>').addClass('mb-3');
+                cityDiv.append($('<h5>').addClass('font-weight-bold').text(cityData.city));
+                
+                const avgRow = $('<div>').addClass('d-flex justify-content-between');
+                avgRow.append($('<span>').text('Yearly Average:'));
+                avgRow.append($('<strong>').text(`₹${yearlyAvg.toFixed(2)}`));
+                cityDiv.append(avgRow);
+                
+                const minRow = $('<div>').addClass('d-flex justify-content-between');
+                minRow.append($('<span>').text(`Lowest (${luxon.DateTime.fromObject({year: parseInt(year), month: parseInt(minMonth), day: 1}).toFormat('MMM')}):`));
+                minRow.append($('<strong>').text(`₹${minPrice.toFixed(2)}`));
+                cityDiv.append(minRow);
+                
+                const maxRow = $('<div>').addClass('d-flex justify-content-between');
+                maxRow.append($('<span>').text(`Highest (${luxon.DateTime.fromObject({year: parseInt(year), month: parseInt(maxMonth), day: 1}).toFormat('MMM')}):`));
+                maxRow.append($('<strong>').text(`₹${maxPrice.toFixed(2)}`));
+                cityDiv.append(maxRow);
+                
+                summary.append(cityDiv);
+                
+                if (cityData !== allData[allData.length - 1]) {
+                    summary.append($('<hr>'));
+                }
+            });
+        }
+        
+        // Update correlation chart
+        function updateCorrelationChart(data1, data2) {
+            // Prepare data - match by year and month
+            const pairedData = [];
+            
+            data1.forEach(d1 => {
+                const d2 = data2.find(d => d.year === d1.year && d.month === d1.month);
+                if (d2) {
+                    pairedData.push({
+                        x: d1.avg_price,
+                        y: d2.avg_price,
+                        label: `${luxon.DateTime.fromObject({year: parseInt(d1.year), month: parseInt(d1.month), day: 1}).toFormat('MMM yyyy')}`
+                    });
+                }
+            });
+            
+            if (pairedData.length === 0) return;
+            
+            // Calculate correlation coefficient
+            const xValues = pairedData.map(d => d.x);
+            const yValues = pairedData.map(d => d.y);
+            const correlation = pearsonCorrelation(xValues, yValues);
+            
+            // Create or update chart
+            const ctx = document.getElementById('correlationChart').getContext('2d');
+            
+            if (charts.correlationChart) {
+                charts.correlationChart.data.datasets[0].data = pairedData;
+                charts.correlationChart.options.plugins.annotation.annotations.box1.label.content = `Correlation: ${correlation.toFixed(2)}`;
+                charts.correlationChart.update();
+            } else {
+                charts.correlationChart = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Price Correlation',
+                            data: pairedData,
+                            backgroundColor: 'rgba(78, 115, 223, 0.7)',
+                            borderColor: 'rgba(78, 115, 223, 1)',
+                            borderWidth: 1,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.x.toFixed(2)} vs ${context.parsed.y.toFixed(2)} (${context.raw.label})`;
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: {
+                                    box1: {
+                                        type: 'label',
+                                        xValue: Math.min(...xValues),
+                                        yValue: Math.max(...yValues),
+                                        backgroundColor: 'rgba(245, 245, 245, 0.8)',
+                                        content: `Correlation: ${correlation.toFixed(2)}`,
+                                        font: {
+                                            size: 14,
+                                            weight: 'bold'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: `${$('#compareCity1').val()} Price (₹)`
+                                },
+                                beginAtZero: false
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: `${$('#compareCity2').val()} Price (₹)`
+                                },
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Pearson correlation coefficient
+        function pearsonCorrelation(x, y) {
+            const n = x.length;
+            let sumX = 0, sumY = 0, sumXY = 0;
+            let sumX2 = 0, sumY2 = 0;
+            
+            for (let i = 0; i < n; i++) {
+                sumX += x[i];
+                sumY += y[i];
+                sumXY += x[i] * y[i];
+                sumX2 += x[i] * x[i];
+                sumY2 += y[i] * y[i];
+            }
+            
+            const numerator = sumXY - (sumX * sumY / n);
+            const denominator = Math.sqrt((sumX2 - (sumX * sumX / n)) * (sumY2 - (sumY * sumY / n)));
+            
+            return denominator === 0 ? 0 : numerator / denominator;
+        }
+        
+        // Update difference chart
+        function updateDifferenceChart(data1, data2, year) {
+            // Filter for the selected year and sort by month
+            const yearData1 = data1
+                .filter(a => a.year === year)
+                .sort((a, b) => parseInt(a.month) - parseInt(b.month));
+                
+            const yearData2 = data2
+                .filter(a => a.year === year)
+                .sort((a, b) => parseInt(a.month) - parseInt(b.month));
+                
+            if (yearData1.length === 0 || yearData2.length === 0) return;
+            
+            // Calculate differences
+            const labels = yearData1.map(a => 
+                luxon.DateTime.fromObject({
+                    year: parseInt(a.year),
+                    month: parseInt(a.month),
+                    day: 1
+                }).toFormat('MMM')
+            );
+            
+            const differences = yearData1.map((a, i) => {
+                const b = yearData2[i];
+                return b ? a.avg_price - b.avg_price : 0;
+            });
+            
+            // Create or update chart
+            const ctx = document.getElementById('differenceChart').getContext('2d');
+            
+            if (charts.differenceChart) {
+                charts.differenceChart.data.labels = labels;
+                charts.differenceChart.data.datasets[0].data = differences;
+                charts.differenceChart.update();
+            } else {
+                charts.differenceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Price Difference',
+                            data: differences,
+                            backgroundColor: function(context) {
+                                return context.raw >= 0 ? 
+                                    'rgba(231, 74, 59, 0.7)' : // Red for positive difference (city1 > city2)
+                                    'rgba(28, 200, 138, 0.7)'; // Green for negative difference (city1 < city2)
+                            },
+                            borderColor: function(context) {
+                                return context.raw >= 0 ? 
+                                    'rgba(231, 74, 59, 1)' : 
+                                    'rgba(28, 200, 138, 1)';
+                            },
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const city1 = $('#compareCity1').val();
+                                        const city2 = $('#compareCity2').val();
+                                        const diff = context.raw;
+                                        return diff >= 0 ? 
+                                            `${city1} is ₹${diff.toFixed(2)} higher than ${city2}` :
+                                            `${city1} is ₹${Math.abs(diff).toFixed(2)} lower than ${city2}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Month'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Price Difference (₹)'
+                                },
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Update predictions
+        function updatePredictions() {
+            const city = $('#predictCity').val();
+            
+            // Get all predictions
+            Promise.all([
+                $.get(`/api/predict?city=${city}&type=next_week`),
+                $.get(`/api/predict?city=${city}&type=next_month`),
+                $.get(`/api/predict?city=${city}&type=next_year`),
+                $.get(`/api/predict?city=${city}&type=next_12months`)
+            ]).then(([weekData, monthData, yearData, months12Data]) => {
+                // Update prediction cards
+                if (weekData.prediction && weekData.prediction.length > 0) {
+                    const avg = weekData.prediction.reduce((sum, p) => sum + p, 0) / weekData.prediction.length;
+                    $('#nextWeekPred').text(`₹${avg.toFixed(2)}`);
+                    $('#nextWeekModels').text(`Using ${weekData.models.join(', ')}`);
+                }
+                
+                if (monthData.prediction && monthData.prediction.length > 0) {
+                    $('#nextMonthPred').text(`₹${monthData.prediction[0].toFixed(2)}`);
+                    $('#nextMonthModels').text(`Using ${monthData.models.join(', ')}`);
+                }
+                
+                if (yearData.prediction && yearData.prediction.length > 0) {
+                    const avg = yearData.prediction.reduce((sum, p) => sum + p, 0) / yearData.prediction.length;
+                    $('#nextYearPred').text(`₹${avg.toFixed(2)}`);
+                    $('#nextYearModels').text(`Using ${yearData.models.join(', ')}`);
+                }
+                
+                if (months12Data.prediction && months12Data.prediction.length > 0) {
+                    const avg = months12Data.prediction.reduce((sum, p) => sum + p, 0) / months12Data.prediction.length;
+                    $('#next12MonthsPred').text(`₹${avg.toFixed(2)}`);
+                    $('#next12MonthsModels').text(`Using ${months12Data.models.join(', ')}`);
+                }
+                
+                // Update prediction chart with next year data
+                if (yearData.prediction && yearData.dates) {
+                    updatePredictionChart(yearData);
+                }
+                
+                // Update prediction tables
+                updatePredictionTables(yearData, months12Data);
+            });
+        }
+        
+        // Update prediction chart
+        function updatePredictionChart(yearData) {
+            // Get historical data for context
+            const city = $('#predictCity').val();
+            const startDate = luxon.DateTime.fromISO(yearData.dates[0]).minus({years: 3}).toISODate();
+            const endDate = luxon.DateTime.fromISO(yearData.dates[0]).minus({days: 1}).toISODate();
+            
+            $.get(`/api/monthly/range?city=${city}&start=${startDate}&end=${endDate}`, function(historyData) {
+                if (historyData.avgs) {
+                    // Prepare historical data
+                    const historyLabels = historyData.avgs.map(a => 
+                        luxon.DateTime.fromObject({
+                            year: parseInt(a.year),
+                            month: parseInt(a.month),
+                            day: 1
+                        }).toFormat('MMM yyyy')
+                    );
+                    const historyValues = historyData.avgs.map(a => a.avg_price);
+                    
+                    // Prepare prediction data
+                    const predictionLabels = yearData.dates.map(d => 
+                        luxon.DateTime.fromISO(d).toFormat('MMM yyyy')
+                    );
+                    const predictionValues = yearData.prediction;
+                    
+                    // Combine for chart
+                    const allLabels = [...historyLabels, ...predictionLabels];
+                    const allValues = [...historyValues, ...predictionValues];
+                    
+                    // Create or update chart
+                    const ctx = document.getElementById('predictionChart').getContext('2d');
+                    
+                    if (charts.predictionChart) {
+                        charts.predictionChart.data.labels = allLabels;
+                        charts.predictionChart.data.datasets[0].data = allValues;
+                        charts.predictionChart.data.datasets[1].data = [...historyValues, ...Array(predictionValues.length).fill(null)];
+                        charts.predictionChart.update();
+                    } else {
+                        charts.predictionChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: allLabels,
+                                datasets: [
+                                    {
+                                        label: 'Historical + Predicted',
+                                        data: allValues,
+                                        borderColor: 'rgba(78, 115, 223, 1)',
+                                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                                        borderWidth: 2,
+                                        fill: true,
+                                        tension: 0.4
+                                    },
+                                    {
+                                        label: 'Historical Only',
+                                        data: [...historyValues, ...Array(predictionValues.length).fill(null)],
+                                        borderColor: 'rgba(169, 169, 169, 1)',
+                                        borderWidth: 1,
+                                        borderDash: [5, 5],
+                                        tension: 0.4
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'top'
+                                    },
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: false
+                                    },
+                                    annotation: {
+                                        annotations: {
+                                            line1: {
+                                                type: 'line',
+                                                yMin: 0,
+                                                yMax: 0,
+                                                xMin: historyLabels.length - 0.5,
+                                                xMax: historyLabels.length - 0.5,
+                                                borderColor: 'rgb(231, 74, 59)',
+                                                borderWidth: 2,
+                                                label: {
+                                                    content: 'Prediction Start',
+                                                    enabled: true,
+                                                    position: 'top'
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Month'
+                                        }
+                                    },
+                                    y: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Price (₹)'
+                                        },
+                                        beginAtZero: false
+                                    }
+                                },
+                                interaction: {
+                                    mode: 'nearest',
+                                    axis: 'x',
+                                    intersect: false
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Update prediction tables
+        function updatePredictionTables(yearData, months12Data) {
+            // Year prediction table
+            const yearTable = $('#yearPredictionTable');
+            yearTable.empty();
+            
+            if (yearData.prediction && yearData.dates) {
+                yearData.dates.forEach((date, index) => {
+                    const pred = yearData.prediction[index];
+                    const actual = yearData.last_actual; // Note: Actual would need to be fetched separately
+                    
+                    const row = $('<tr>');
+                    row.append($('<td>').text(luxon.DateTime.fromISO(date).toFormat('MMMM yyyy')));
+                    row.append($('<td>').text(`₹${pred.toFixed(2)}`));
+                    row.append($('<td>').text(actual ? `₹${actual.toFixed(2)}` : 'N/A'));
+                    
+                    const diff = actual ? pred - actual : null;
+                    const diffCell = $('<td>');
+                    if (diff !== null) {
+                        diffCell.text(`₹${diff.toFixed(2)}`);
+                        diffCell.addClass(diff >= 0 ? 'text-danger' : 'text-success');
+                    } else {
+                        diffCell.text('N/A');
+                    }
+                    row.append(diffCell);
+                    
+                    yearTable.append(row);
+                });
+            }
+            
+            // Next 12 months prediction table
+            const months12Table = $('#rollingPredictionTable');
+            months12Table.empty();
+            
+            if (months12Data.prediction && months12Data.dates) {
+                months12Data.dates.forEach((date, index) => {
+                    const pred = months12Data.prediction[index];
+                    const actual = months12Data.last_actual; // Note: Actual would need to be fetched separately
+                    
+                    const row = $('<tr>');
+                    row.append($('<td>').text(luxon.DateTime.fromISO(date).toFormat('MMMM yyyy')));
+                    row.append($('<td>').text(`₹${pred.toFixed(2)}`));
+                    row.append($('<td>').text(actual ? `₹${actual.toFixed(2)}` : 'N/A'));
+                    
+                    const diff = actual ? pred - actual : null;
+                    const diffCell = $('<td>');
+                    if (diff !== null) {
+                        diffCell.text(`₹${diff.toFixed(2)}`);
+                        diffCell.addClass(diff >= 0 ? 'text-danger' : 'text-success');
+                    } else {
+                        diffCell.text('N/A');
+                    }
+                    row.append(diffCell);
+                    
+                    months12Table.append(row);
+                });
+            }
+        }
+        
+        // Update district view
+        function updateDistrictView() {
+            const district = $('#districtSelect').val();
+            
+            $.get(`/api/district/price?district=${district}`, function(data) {
+                if (data.district) {
+                    // Update basic info
+                    $('#districtName').text(data.district);
+                    $('#nearestCity').text(data.based_on || 'N/A');
+                    $('#districtDistance').text(data.distance ? `${data.distance.toFixed(1)} km` : 'N/A');
+                    $('#districtPrice').text(data.price ? `₹${data.price.toFixed(2)}` : 'N/A');
+                    
+                    // Update predictions
+                    if (data.predictions) {
+                        if (data.predictions.next_week && data.predictions.next_week.prediction) {
+                            const avg = data.predictions.next_week.prediction.reduce((sum, p) => sum + p, 0) / 
+                                         data.predictions.next_week.prediction.length;
+                            $('#districtNextWeek').text(`₹${avg.toFixed(2)}`);
+                        }
+                        
+                        if (data.predictions.next_month && data.predictions.next_month.prediction) {
+                            $('#districtNextMonth').text(`₹${data.predictions.next_month.prediction[0].toFixed(2)}`);
+                        }
+                        
+                        if (data.predictions.next_year && data.predictions.next_year.prediction) {
+                            const avg = data.predictions.next_year.prediction.reduce((sum, p) => sum + p, 0) / 
+                                         data.predictions.next_year.prediction.length;
+                            $('#districtNextYear').text(`₹${avg.toFixed(2)}`);
+                        }
+                        
+                        if (data.predictions.next_12months && data.predictions.next_12months.prediction) {
+                            const avg = data.predictions.next_12months.prediction.reduce((sum, p) => sum + p, 0) / 
+                                         data.predictions.next_12months.prediction.length;
+                            $('#districtNext12Months').text(`₹${avg.toFixed(2)}`);
+                        }
+                    }
+                    
+                    // Update chart with nearest city data
+                    if (data.based_on && data.based_on !== 'N/A') {
+                        updateDistrictChart(data.based_on);
+                    }
+                    
+                    // Update nearby districts table
+                    updateNearbyDistrictsTable(district);
+                }
+            });
+        }
+        
+        // Update district chart
+        function updateDistrictChart(city) {
+            // Get last 12 months data
+            const startDate = luxon.DateTime.now().minus({months: 12}).toISODate();
+            const endDate = luxon.DateTime.now().toISODate();
+            
+            $.get(`/api/monthly/range?city=${city}&start=${startDate}&end=${endDate}`, function(data) {
+                if (data.avgs) {
+                    // Sort by date
+                    data.avgs.sort((a, b) => {
+                        const dateA = new Date(`${a.year}-${a.month}-01`);
+                        const dateB = new Date(`${b.year}-${b.month}-01`);
+                        return dateA - dateB;
+                    });
+                    
+                    // Prepare chart data
+                    const labels = data.avgs.map(a => 
+                        luxon.DateTime.fromObject({
+                            year: parseInt(a.year),
+                            month: parseInt(a.month),
+                            day: 1
+                        }).toFormat('MMM yyyy')
+                    );
+                    const prices = data.avgs.map(a => a.avg_price);
+                    
+                    // Create or update chart
+                    const ctx = document.getElementById('districtChart').getContext('2d');
+                    
+                    if (charts.districtChart) {
+                        charts.districtChart.data.labels = labels;
+                        charts.districtChart.data.datasets[0].data = prices;
+                        charts.districtChart.update();
+                    } else {
+                        charts.districtChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: 'Monthly Average Price',
+                                    data: prices,
+                                    borderColor: 'rgba(78, 115, 223, 1)',
+                                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'top'
+                                    },
+                                    tooltip: {
+                                        mode: 'index',
+                                        intersect: false
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Month'
+                                        }
+                                    },
+                                    y: {
+                                        display: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Price (₹)'
+                                        },
+                                        beginAtZero: false
+                                    }
+                                },
+                                interaction: {
+                                    mode: 'nearest',
+                                    axis: 'x',
+                                    intersect: false
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Update nearby districts table
+        function updateNearbyDistrictsTable(district) {
+            // In a real implementation, this would query an API for nearby districts
+            // For now, we'll just show a few example districts
+            const exampleDistricts = [
+                {district: 'District 1', price: 425.50, distance: 25.3},
+                {district: 'District 2', price: 410.75, distance: 32.1},
+                {district: 'District 3', price: 438.20, distance: 18.7},
+                {district: 'District 4', price: 395.30, distance: 42.5},
+                {district: 'District 5', price: 445.90, distance: 12.2}
+            ];
+            
+            const table = $('#nearbyDistrictsTable');
+            table.empty();
+            
+            exampleDistricts.forEach(d => {
+                const row = $('<tr>');
+                row.append($('<td>').text(d.district));
+                row.append($('<td>').text(`₹${d.price.toFixed(2)}`));
+                row.append($('<td>').text(`${d.distance} km`));
+                table.append(row);
+            });
+        }
+        
+        // Load alerts
+        function loadAlerts() {
+            // In a real implementation, this would query an API for user's alerts
+            // For now, we'll just show some example alerts
+            const exampleAlerts = [
+                {
+                    location: 'Ajmer',
+                    condition: 'Price goes above',
+                    target: 450.00,
+                    current: 437.50,
+                    status: 'Active'
+                },
+                {
+                    location: 'Delhi (CC)',
+                    condition: 'Price goes below',
+                    target: 400.00,
+                    current: 410.25,
+                    status: 'Active'
+                },
+                {
+                    location: 'Chennai (CC)',
+                    condition: 'Price changes by',
+                    target: 5.00,
+                    current: 475.00,
+                    status: 'Triggered'
+                }
+            ];
+            
+            const table = $('#alertsTable');
+            table.empty();
+            
+            exampleAlerts.forEach(alert => {
+                const row = $('<tr>');
+                row.append($('<td>').text(alert.location));
+                row.append($('<td>').text(alert.condition));
+                row.append($('<td>').text(`₹${alert.target.toFixed(2)}`));
+                row.append($('<td>').text(`₹${alert.current.toFixed(2)}`));
+                
+                const statusCell = $('<td>');
+                const statusSpan = $('<span>').addClass('badge');
+                statusSpan.text(alert.status);
+                
+                if (alert.status === 'Active') {
+                    statusSpan.addClass('bg-success');
+                } else if (alert.status === 'Triggered') {
+                    statusSpan.addClass('bg-danger');
+                } else {
+                    statusSpan.addClass('bg-secondary');
+                }
+                
+                statusCell.append(statusSpan);
+                row.append(statusCell);
+                
+                const actions = $('<td>');
+                actions.append($('<button>').addClass('btn btn-sm btn-outline-danger').html('<i class="bi bi-trash"></i>'));
+                row.append(actions);
+                
+                table.append(row);
+            });
+            
+            // Also load alert history
+            loadAlertHistory();
+        }
+        
+        // Load alert history
+        function loadAlertHistory() {
+            // In a real implementation, this would query an API for alert history
+            // For now, we'll just show some example history
+            const exampleHistory = [
+                {
+                    date: '2023-05-15',
+                    location: 'Ajmer',
+                    condition: 'Price goes above',
+                    trigger: 450.00,
+                    actual: 452.50
+                },
+                {
+                    date: '2023-04-28',
+                    location: 'Delhi (CC)',
+                    condition: 'Price goes below',
+                    trigger: 400.00,
+                    actual: 398.75
+                },
+                {
+                    date: '2023-03-10',
+                    location: 'Chennai (CC)',
+                    condition: 'Price changes by',
+                    trigger: 5.00,
+                    actual: 475.00
+                }
+            ];
+            
+            const table = $('#alertHistoryTable');
+            table.empty();
+            
+            exampleHistory.forEach(history => {
+                const row = $('<tr>');
+                row.append($('<td>').text(history.date));
+                row.append($('<td>').text(history.location));
+                row.append($('<td>').text(history.condition));
+                row.append($('<td>').text(`₹${history.trigger.toFixed(2)}`));
+                row.append($('<td>').text(`₹${history.actual.toFixed(2)}`));
+                table.append(row);
+            });
+        }
+        
+        // Save new alert
+        function saveAlert() {
+            const locationType = $('#alertLocationType').val();
+            const location = locationType === 'city' ? $('#alertCity').val() : $('#alertDistrict').val();
+            const condition = $('#alertCondition').val();
+            const value = parseFloat($('#alertValue').val());
+            const notification = $('#alertNotification').val();
+            
+            // Validate inputs
+            if (!location || isNaN(value)) {
+                alert('Please fill all fields with valid values');
+                return;
+            }
+            
+            // In a real implementation, this would send the alert to the server
+            console.log('Saving alert:', {
+                locationType,
+                location,
+                condition,
+                value,
+                notification
+            });
+            
+            // Close modal and refresh alerts
+            $('#newAlertModal').modal('hide');
+            loadAlerts();
+        }
+        
+        // Search city
+        function searchCity() {
+            const query = $('#searchCity').val().trim();
+            if (query) {
+                // Find matching city
+                const matchingCity = cities.find(c => c.toLowerCase().includes(query.toLowerCase()));
+                if (matchingCity) {
+                    // Switch to daily view and select the city
+                    $('a[href="#daily"]').tab('show');
+                    $('#dailyCity').val(matchingCity).trigger('change');
+                    updateDailyView();
+                } else {
+                    alert('City not found');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
